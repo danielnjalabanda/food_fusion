@@ -30,6 +30,17 @@ require 'partials/navbar.php';
                     We believe food tastes better when shared, and knowledge grows when passed on.</p>
             </div>
         </section>
+
+        <section class="featured-recipes">
+            <div class="section-header">
+                <h2 class="section-title">Recipes</h2>
+                <div class="title-underline"></div>
+            </div>
+            <div class="recipe-grid">
+                <!-- Recipe Card 1 -->
+                <?php downloadRecipes(); ?>
+            </div>
+        </section>
     </main>
 
 <?php

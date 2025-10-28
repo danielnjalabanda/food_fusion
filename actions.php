@@ -47,6 +47,9 @@ switch ($action) {
     case 'contact_us':
         handleContactUs($conn);
         break;
+    case 'submit_recipe':
+        handleSubmitRecipe($conn);
+        break;
     default:
         sendResponse(false, "Invalid action");
         break;
@@ -63,6 +66,154 @@ function handleLogout() {
     session_destroy();
 
     sendResponse(true, "Logged out successfully", "index.php");
+}
+
+function handleSubmitRecipe($conn) {
+    // Ensure user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(false, "Please log in to submit a recipe");
+        return;
+    }
+
+    // Basic required fields
+    if (empty($_POST['title']) || empty($_POST['ingredients']) || empty($_POST['instructions'])) {
+        sendResponse(false, "Title, ingredients and instructions are required");
+        return;
+    }
+
+    // Sanitize inputs (uses existing sanitizeInput function)
+    $title = sanitizeInput($conn, $_POST['title']);
+    $ingredients = sanitizeInput($conn, $_POST['ingredients']);
+    $instructions = sanitizeInput($conn, $_POST['instructions']);
+    $prep_time = isset($_POST['prep_time']) && $_POST['prep_time'] !== '' ? intval($_POST['prep_time']) : null;
+    $cook_time = isset($_POST['cook_time']) && $_POST['cook_time'] !== '' ? intval($_POST['cook_time']) : null;
+    $servings = isset($_POST['servings']) && $_POST['servings'] !== '' ? intval($_POST['servings']) : null;
+    $difficulty = isset($_POST['difficulty']) ? sanitizeInput($conn, $_POST['difficulty']) : 'medium';
+    $cuisine_type = isset($_POST['cuisine_type']) ? sanitizeInput($conn, $_POST['cuisine_type']) : null;
+    $dietary_tags = isset($_POST['dietary_tags']) ? sanitizeInput($conn, $_POST['dietary_tags']) : null;
+
+    $user_id = $_SESSION['user_id'];
+
+    // Validate lengths
+    if (strlen($title) < 3) {
+        sendResponse(false, "Recipe title must be at least 3 characters");
+        return;
+    }
+    if (strlen($ingredients) < 5) {
+        sendResponse(false, "Please provide ingredient details");
+        return;
+    }
+    if (strlen($instructions) < 10) {
+        sendResponse(false, "Please provide detailed instructions");
+        return;
+    }
+
+    // Handle optional image upload
+    $image_filename = ''; // will store filename (or empty => default image handled in display)
+    $uploadDir = __DIR__ . '/assets/images/recipes/'; // actions.php directory level
+    // Ensure upload dir ends with slash and exists
+    if (!is_dir($uploadDir)) {
+        // try to create (best-effort)
+        @mkdir($uploadDir, 0755, true);
+    }
+
+    if (!empty($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $img = $_FILES['image'];
+
+        // Basic upload error check
+        if ($img['error'] !== UPLOAD_ERR_OK) {
+            error_log("Image upload error: " . $img['error']);
+            sendResponse(false, "Image upload failed (error code " . $img['error'] . ")");
+            return;
+        }
+
+        // Validate size (2MB max)
+        $maxSize = 2 * 1024 * 1024;
+        if ($img['size'] > $maxSize) {
+            sendResponse(false, "Image is too large. Maximum size is 2MB.");
+            return;
+        }
+
+        // Validate MIME/type with getimagesize
+        $tmpPath = $img['tmp_name'];
+        $imgInfo = @getimagesize($tmpPath);
+        if ($imgInfo === false) {
+            sendResponse(false, "Uploaded file is not a valid image.");
+            return;
+        }
+
+        $mime = $imgInfo['mime'];
+        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif'];
+        if (!isset($allowed[$mime])) {
+            sendResponse(false, "Unsupported image type. Allowed: JPG, PNG, GIF.");
+            return;
+        }
+
+        // Generate a safe unique filename
+        $ext = $allowed[$mime];
+        $image_filename = time() . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+        $destination = $uploadDir . $image_filename;
+
+        if (!move_uploaded_file($tmpPath, $destination)) {
+            error_log("Failed to move uploaded file to $destination");
+            sendResponse(false, "Failed to save uploaded image.");
+            return;
+        }
+
+        // Optionally, you could perform image resizing/optimization here.
+    }
+
+    // Insert into recipes table
+    // Schema reference from setup.php:
+    // title, image, ingredients, instructions, prep_time, cook_time, servings, difficulty, cuisine_type, dietary_tags, user_id
+    $sql = "INSERT INTO recipes 
+        (title, image, ingredients, instructions, prep_time, cook_time, servings, difficulty, cuisine_type, dietary_tags, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        error_log("Prepare failed for submit_recipe: " . $conn->error);
+        sendResponse(false, "Failed to submit recipe: database error (prepare failed).");
+        return;
+    }
+
+    // For DB columns expecting ints, pass null as NULL or 0; MySQLi bind_param doesn't accept null type directly,
+    // so we cast nulls to null and use null coalescing to 0 where desired. Here we bind integers (use 0 if null).
+    $prep_time_db = $prep_time !== null ? $prep_time : 0;
+    $cook_time_db = $cook_time !== null ? $cook_time : 0;
+    $servings_db = $servings !== null ? $servings : 0;
+    $image_db = $image_filename; // can be empty string
+
+    $stmt->bind_param(
+        "ssssiiisssi",
+        $title,
+        $image_db,
+        $ingredients,
+        $instructions,
+        $prep_time_db,
+        $cook_time_db,
+        $servings_db,
+        $difficulty,
+        $cuisine_type,
+        $dietary_tags,
+        $user_id
+    );
+
+    if ($stmt->execute()) {
+        $new_id = $stmt->insert_id;
+        error_log("Recipe submitted successfully - ID: $new_id by user $user_id");
+        // Return recipe id and redirect to recipes listing page
+        sendResponse(true, "Recipe submitted successfully and will be reviewed.", "index.php?pages=recipes", ['recipe_id' => $new_id]);
+    } else {
+        error_log("Recipe insert failed: " . $stmt->error);
+        // If image was uploaded but DB insert failed, you might want to remove uploaded image to avoid orphan files.
+        if ($image_filename) {
+            @unlink($uploadDir . $image_filename);
+        }
+        sendResponse(false, "Failed to submit recipe: " . $stmt->error);
+    }
+
+    $stmt->close();
 }
 
 /**
