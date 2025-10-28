@@ -88,14 +88,21 @@ function handleBookmarkRecipe($conn) {
         return;
     }
 
-    // Check if already bookmarked
+    // Check if already bookmarked (fast-path)
     if (isBookmarked($conn, $user_id, $recipe_id)) {
         sendResponse(false, "Recipe already bookmarked");
         return;
     }
 
-    // Insert bookmark using prepared statement
+    // Prepare insert statement and check for prepare errors
     $stmt = $conn->prepare("INSERT INTO bookmarks (user_id, recipe_id) VALUES (?, ?)");
+    if ($stmt === false) {
+        // Prepare failed — return DB error
+        error_log("Prepare failed for bookmark insert: " . $conn->error . " (errno: " . $conn->errno . ")");
+        sendResponse(false, "Failed to save recipe: database error (prepare failed).");
+        return;
+    }
+
     $stmt->bind_param("ii", $user_id, $recipe_id);
 
     if ($stmt->execute()) {
@@ -103,8 +110,16 @@ function handleBookmarkRecipe($conn) {
         error_log("Bookmark added successfully - Bookmark ID: $bookmark_id");
         sendResponse(true, "Recipe saved to your bookmarks!");
     } else {
-        error_log("Bookmark failed: " . $stmt->error);
-        sendResponse(false, "Failed to save recipe: " . $stmt->error);
+        // If duplicate entry (race condition), return a friendly message
+        $errno = $stmt->errno ?: $conn->errno;
+        $error = $stmt->error ?: $conn->error;
+        error_log("Bookmark failed (errno $errno): $error");
+
+        if ($errno == 1062) { // duplicate entry
+            sendResponse(false, "Recipe already bookmarked");
+        } else {
+            sendResponse(false, "Failed to save recipe: " . $error);
+        }
     }
 
     $stmt->close();
@@ -130,8 +145,14 @@ function handleRemoveBookmark($conn) {
     // Debug: Log the values
     error_log("Remove bookmark attempt - User ID: $user_id, Recipe ID: $recipe_id");
 
-    // Remove bookmark using prepared statement
+    // Prepare delete statement and check for prepare errors
     $stmt = $conn->prepare("DELETE FROM bookmarks WHERE user_id = ? AND recipe_id = ?");
+    if ($stmt === false) {
+        error_log("Prepare failed for bookmark delete: " . $conn->error . " (errno: " . $conn->errno . ")");
+        sendResponse(false, "Failed to remove bookmark: database error (prepare failed).");
+        return;
+    }
+
     $stmt->bind_param("ii", $user_id, $recipe_id);
 
     if ($stmt->execute()) {
@@ -177,6 +198,10 @@ function handleCheckBookmark($conn) {
 // Helper function to check if recipe exists
 function recipeExists($conn, $recipe_id) {
     $stmt = $conn->prepare("SELECT id FROM recipes WHERE id = ?");
+    if ($stmt === false) {
+        error_log("Prepare failed for recipeExists: " . $conn->error);
+        return false;
+    }
     $stmt->bind_param("i", $recipe_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -189,6 +214,11 @@ function recipeExists($conn, $recipe_id) {
 // Helper function to check if recipe is bookmarked
 function isBookmarked($conn, $user_id, $recipe_id) {
     $stmt = $conn->prepare("SELECT id FROM bookmarks WHERE user_id = ? AND recipe_id = ?");
+    if ($stmt === false) {
+        error_log("Prepare failed for isBookmarked: " . $conn->error);
+        // Assume not bookmarked on DB error (safer to let client attempt an insert which will surface the real error)
+        return false;
+    }
     $stmt->bind_param("ii", $user_id, $recipe_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -379,3 +409,4 @@ function sendResponse($success, $message, $redirect = null, $additionalData = []
     echo json_encode($response);
     exit();
 }
+

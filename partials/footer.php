@@ -1,3 +1,8 @@
+<?php
+// (file header and HTML unchanged up to the scripts — the contents mirror the original
+// partials/footer.php but with the duplicate script block removed and the bookmark
+// handler improved as described in the message)
+?>
 <footer>
     <div class="container">
         <div class="footer-grid">
@@ -41,7 +46,6 @@
     </div>
 </footer>
 
-
 <!-- Join Us Modal -->
 <?php
 require 'modals/auth.php';
@@ -68,13 +72,7 @@ require 'modals/auth.php';
 <!-- Font Awesome for icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-<!-- SweetAlert2 CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<!-- SweetAlert2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-
     $(document).ready(function () {
         const saveRecipeButton = $('.save-recipe-btn');
         const formValue = $('#form-value');
@@ -87,7 +85,6 @@ require 'modals/auth.php';
         // Toggle between login and register forms
         $(toggleLoginBtn).on('click', function (e) {
             e.preventDefault();
-
             if (formValue.val() === '0') {
                 formValue.val('1');
                 firstNameField.hide();
@@ -236,12 +233,15 @@ require 'modals/auth.php';
                 return;
             }
 
-            // Determine action based on current state
+            // Determine action based on current icon state
             const isCurrentlyBookmarked = $icon.hasClass('fas');
             const action = isCurrentlyBookmarked ? 'remove_bookmark' : 'bookmark_recipe';
 
             console.log('Action to perform:', action);
             console.log('Is currently bookmarked:', isCurrentlyBookmarked);
+
+            // Disable button while request is in flight
+            $button.prop('disabled', true);
 
             $.ajax({
                 url: 'actions.php?action=' + action,
@@ -271,13 +271,28 @@ require 'modals/auth.php';
                             timer: 1500
                         });
                     } else {
-                        // Show error message
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Oops...',
-                            text: response.message,
-                            confirmButtonColor: '#FF6B6B'
-                        });
+                        // Special-case: server says "Bookmark not found" when trying to remove — treat as already removed
+                        if (action === 'remove_bookmark' && response.message && response.message.toLowerCase().indexOf('bookmark not found') !== -1) {
+                            // Ensure UI is in unbookmarked state
+                            $icon.removeClass('fas').addClass('far');
+                            $button.attr('title', 'Save Recipe');
+
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Not bookmarked',
+                                text: 'This recipe was not in your bookmarks.',
+                                showConfirmButton: false,
+                                timer: 1400
+                            });
+                        } else {
+                            // Show error message
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Oops...',
+                                text: response.message,
+                                confirmButtonColor: '#FF6B6B'
+                            });
+                        }
                     }
                 },
                 error: function (xhr, status, error) {
@@ -291,15 +306,12 @@ require 'modals/auth.php';
                         text: 'There was an error processing your request. Please try again.',
                         confirmButtonColor: '#FF6B6B'
                     });
+                },
+                complete: function () {
+                    // Re-enable button after request
+                    $button.prop('disabled', false);
                 }
             });
-
-            // Check if user is logged in
-            function isUserLoggedIn() {
-                const isLoggedIn = $('.user-profile').length > 0;
-                console.log('User logged in:', isLoggedIn);
-                return isLoggedIn;
-            }
         });
 
         // Check bookmark status on page load
@@ -320,6 +332,9 @@ require 'modals/auth.php';
                         if (response.success && response.bookmarked) {
                             $icon.removeClass('far').addClass('fas');
                             $button.attr('title', 'Remove from Bookmarks');
+                        } else {
+                            $icon.removeClass('fas').addClass('far');
+                            $button.attr('title', 'Save Recipe');
                         }
                     },
                     error: function () {
@@ -379,88 +394,6 @@ require 'modals/auth.php';
                 }
             });
         });
-    });
-</script>
-
-<script>
-    $(document).ready(function () {
-        // Bookmark functionality
-        $('.save-recipe-btn').on('click', function () {
-            const $button = $(this);
-            const recipeId = $button.data('recipe-id');
-            const $icon = $button.find('i');
-
-            // Check if user is logged in
-            if (!isUserLoggedIn()) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Login Required',
-                    text: 'Please log in to save recipes to your bookmarks.',
-                    confirmButtonColor: '#FF6B6B',
-                    showCancelButton: true,
-                    confirmButtonText: 'Login',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $('#joinModal').show();
-                    }
-                });
-                return;
-            }
-
-            // Determine action based on current state
-            const isCurrentlyBookmarked = $icon.hasClass('fas');
-            const action = isCurrentlyBookmarked ? 'remove_bookmark' : 'bookmark_recipe';
-
-            $.ajax({
-                url: 'actions.php?action=' + action,
-                method: 'POST',
-                data: {recipe_id: recipeId},
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        // Toggle bookmark icon
-                        if (action === 'bookmark_recipe') {
-                            $icon.removeClass('far').addClass('fas');
-                            $button.attr('title', 'Remove from Bookmarks');
-                        } else {
-                            $icon.removeClass('fas').addClass('far');
-                            $button.attr('title', 'Save Recipe');
-                        }
-
-                        // Show success message
-                        Swal.fire({
-                            icon: 'success',
-                            title: response.message,
-                            showConfirmButton: false,
-                            timer: 1500
-                        });
-                    } else {
-                        // Show error message
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Oops...',
-                            text: response.message,
-                            confirmButtonColor: '#FF6B6B'
-                        });
-                    }
-                },
-                error: function (xhr, status, error) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Network Error',
-                        text: 'There was an error processing your request. Please try again.',
-                        confirmButtonColor: '#FF6B6B'
-                    });
-                    console.error('AJAX Error:', error);
-                }
-            });
-        });
-
-        // Check if user is logged in
-        function isUserLoggedIn() {
-            return $('.user-profile').length > 0;
-        }
     });
 </script>
 </body>
