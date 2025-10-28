@@ -394,6 +394,110 @@ require 'modals/auth.php';
                 }
             });
         });
+
+        // Replace '#contactForm' with the actual ID or class of your contact form in contact.inc.php
+        const $contactForm = $('#contactForm');
+        const $submitBtn = $contactForm.find('button[type="submit"]');
+
+        // Simple email regex used elsewhere in the project
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        $contactForm.on('submit', function (e) {
+            e.preventDefault();
+
+            // Collect and trim values
+            const name = $.trim($contactForm.find('input[name="name"]').val() || '');
+            const subject = $.trim($contactForm.find('input[name="subject"]').val() || '');
+            const email = $.trim($contactForm.find('input[name="email"]').val() || '');
+            const message = $.trim($contactForm.find('textarea[name="message"]').val() || '');
+
+            // Client-side validation
+            if (!name || name.length < 2) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid name',
+                    text: 'Please enter your name (at least 2 characters).',
+                    confirmButtonColor: '#FF6B6B'
+                });
+                return;
+            }
+
+            if (!email || !emailRegex.test(email)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid email',
+                    text: 'Please enter a valid email address.',
+                    confirmButtonColor: '#FF6B6B'
+                });
+                return;
+            }
+
+            if (!message || message.length < 10) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Message too short',
+                    text: 'Please enter a message (at least 10 characters).',
+                    confirmButtonColor: '#FF6B6B'
+                });
+                return;
+            }
+
+            // Disable button to prevent double submits and show a loading state
+            $submitBtn.prop('disabled', true);
+            const originalBtnHtml = $submitBtn.html();
+            $submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Sending...');
+
+            // Send via AJAX to actions.php?action=contact_us
+            $.ajax({
+                url: 'actions.php?action=contact_us',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    name: name,
+                    email: email,
+                    subject: subject,
+                    message: message
+                },
+                success: function (response) {
+                    console.log('Contact form response:', response);
+
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Message sent',
+                            text: response.message || "Thanks — we'll get back to you soon.",
+                            showConfirmButton: false,
+                            timer: 1600
+                        });
+
+                        // Reset the form after success
+                        $contactForm[0].reset();
+                    } else {
+                        // Show server-provided message
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: response.message || 'Failed to submit message. Please try again later.',
+                            confirmButtonColor: '#FF6B6B'
+                        });
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Contact form AJAX error:', status, error, xhr);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Network Error',
+                        text: 'There was an error submitting your message. Please try again.',
+                        confirmButtonColor: '#FF6B6B'
+                    });
+                },
+                complete: function () {
+                    // Restore submit button state
+                    $submitBtn.prop('disabled', false);
+                    $submitBtn.html(originalBtnHtml);
+                }
+            });
+        });
     });
 </script>
 </body>

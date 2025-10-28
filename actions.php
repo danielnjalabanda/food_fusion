@@ -83,6 +83,7 @@ function handleContactUs($conn) {
 
     // Sanitize input
     $name = sanitizeInput($conn, $_POST['name']);
+    $subject = sanitizeInput($conn, $_POST['subject']);
     $email = sanitizeInput($conn, $_POST['email']);
     $message = sanitizeInput($conn, $_POST['message']);
 
@@ -93,19 +94,19 @@ function handleContactUs($conn) {
     }
 
     // Prepare insert statement
-    $stmt = $conn->prepare("INSERT INTO contact_us (name, email, message) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO contact_us (name, email, subject, message) VALUES (?, ?, ?, ?)");
     if ($stmt === false) {
         error_log("Prepare failed for contact_us insert: " . $conn->error . " (errno: " . $conn->errno . ")");
         sendResponse(false, "Failed to submit message: database error (prepare failed).");
         return;
     }
 
-    $stmt->bind_param("sss", $name, $email, $message);
+    $stmt->bind_param("ssss", $name, $subject, $email, $message);
 
     if ($stmt->execute()) {
         $insertId = $stmt->insert_id;
         error_log("Contact message saved - ID: $insertId, from: $email");
-        // Optionally: you could send an email to admins here
+        // Optionally: you could email admins here
         sendResponse(true, "Your message has been received. We'll get back to you soon.");
     } else {
         error_log("Contact us insert failed: " . $stmt->error);

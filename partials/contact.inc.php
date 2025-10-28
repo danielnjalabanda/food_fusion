@@ -23,15 +23,9 @@ require 'partials/navbar.php';
                         </div>
 
                         <form id="contactForm" method="POST">
-                            <div class="form-row">
-                                <div class="form-group half-width">
-                                    <label for="first_name">First Name</label>
-                                    <input type="text" id="first_name" name="first_name" placeholder="Your first name" required>
-                                </div>
-                                <div class="form-group half-width">
-                                    <label for="last_name">Last Name</label>
-                                    <input type="text" id="last_name" name="last_name" placeholder="Your last name" required>
-                                </div>
+                            <div class="form-group">
+                                <label for="name">Enter your full name</label>
+                                <input type="text" id="name" name="name" placeholder="your full name" required>
                             </div>
 
                             <div class="form-group">

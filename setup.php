@@ -32,6 +32,8 @@ try {
     // Create users table
     $sql = "CREATE TABLE IF NOT EXISTS users (
         id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        firstname VARCHAR(50) NOT NULL,
+        lastname VARCHAR(50) NOT NULL,
         username VARCHAR(50) NOT NULL,
         password VARCHAR(255) NOT NULL,
         email VARCHAR(100) NOT NULL,
@@ -126,10 +128,10 @@ try {
     $sql = "CREATE TABLE IF NOT EXISTS contact_us (
         id INT(11) AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
+        subject VARCHAR(20) NOT NULL,
         email VARCHAR(100) NOT NULL,
         message TEXT NOT NULL,
-        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status ENUM('pending', 'read', 'replied') DEFAULT 'pending'
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )";
 
     if ($conn->query($sql)) {
