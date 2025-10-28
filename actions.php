@@ -44,6 +44,9 @@ switch ($action) {
     case 'check_bookmark':
         handleCheckBookmark($conn);
         break;
+    case 'contact_us':
+        handleContactUs($conn);
+        break;
     default:
         sendResponse(false, "Invalid action");
         break;
@@ -60,6 +63,56 @@ function handleLogout() {
     session_destroy();
 
     sendResponse(true, "Logged out successfully", "index.php");
+}
+
+/**
+ * Handle contact us submissions from the contact page.
+ * Expected POST fields:
+ *  - name
+ *  - email
+ *  - message
+ *
+ * Inserts into contact_us (name, email, message). Table already created by setup.php.
+ */
+function handleContactUs($conn) {
+    // Validate required fields
+    if (empty($_POST['name']) || empty($_POST['email']) || empty($_POST['message'])) {
+        sendResponse(false, "All fields are required");
+        return;
+    }
+
+    // Sanitize input
+    $name = sanitizeInput($conn, $_POST['name']);
+    $email = sanitizeInput($conn, $_POST['email']);
+    $message = sanitizeInput($conn, $_POST['message']);
+
+    // Validate email
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendResponse(false, "Invalid email format");
+        return;
+    }
+
+    // Prepare insert statement
+    $stmt = $conn->prepare("INSERT INTO contact_us (name, email, message) VALUES (?, ?, ?)");
+    if ($stmt === false) {
+        error_log("Prepare failed for contact_us insert: " . $conn->error . " (errno: " . $conn->errno . ")");
+        sendResponse(false, "Failed to submit message: database error (prepare failed).");
+        return;
+    }
+
+    $stmt->bind_param("sss", $name, $email, $message);
+
+    if ($stmt->execute()) {
+        $insertId = $stmt->insert_id;
+        error_log("Contact message saved - ID: $insertId, from: $email");
+        // Optionally: you could send an email to admins here
+        sendResponse(true, "Your message has been received. We'll get back to you soon.");
+    } else {
+        error_log("Contact us insert failed: " . $stmt->error);
+        sendResponse(false, "Failed to submit message: " . $stmt->error);
+    }
+
+    $stmt->close();
 }
 
 // Bookmark recipe handler

@@ -22,7 +22,7 @@ require 'partials/navbar.php';
                             <div class="title-underline"></div>
                         </div>
 
-                        <form id="contactForm" action="process-contact.php" method="POST">
+                        <form id="contactForm" method="POST">
                             <div class="form-row">
                                 <div class="form-group half-width">
                                     <label for="first_name">First Name</label>
