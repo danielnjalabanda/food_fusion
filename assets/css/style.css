@@ -559,24 +559,25 @@ header {
 .social-icons {
     display: flex;
     gap: 1rem;
+    margin-top: 1rem;
+}
+
+.social-icons-container {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.social-icons-container a {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    margin-right: 1rem;
 }
 
 .social-icons a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background-color: var(--light-gray);
-    border-radius: 50%;
-    color: var(--dark-color);
-    transition: all 0.3s;
-}
-
-.social-icons a:hover {
-    background-color: var(--primary-color);
     color: white;
-    transform: translateY(-3px);
+    font-size: 1.5rem;
+    margin-right: 1rem;
 }
 
 .map-container {
@@ -850,16 +851,6 @@ footer {
 
 .footer-links a {
     color: white;
-}
-
-.social-icons {
-    margin-top: 1rem;
-}
-
-.social-icons a {
-    color: white;
-    font-size: 1.5rem;
-    margin-right: 1rem;
 }
 
 .footer-newsletter input {

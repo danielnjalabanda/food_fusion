@@ -97,7 +97,7 @@ require 'partials/navbar.php';
 
                         <div class="social-links">
                             <h3>Follow Us</h3>
-                            <div class="social-icons">
+                            <div class="social-icons-container">
                                 <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
                                 <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
                                 <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>

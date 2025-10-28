@@ -1,8 +1,3 @@
-<?php
-// (file header and HTML unchanged up to the scripts — the contents mirror the original
-// partials/footer.php but with the duplicate script block removed and the bookmark
-// handler improved as described in the message)
-?>
 <footer>
     <div class="container">
         <div class="footer-grid">
@@ -13,7 +8,7 @@
             <div class="footer-links">
                 <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="index.php">Home</a></li>
+                    <li><a href="http://localhost/example/">Home</a></li>
                     <li><a href="pages/recipes/">Recipes</a></li>
                     <li><a href="pages/tips/">Culinary Tips</a></li>
                     <li><a href="pages/forum/">Community</a></li>
@@ -62,15 +57,18 @@ require 'modals/auth.php';
 <script src="assets/js/carousel.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/jquery-3.7.1.min.js"></script>
+<script src="assets/css/all.min.css"></script>
+<script src="assets/js/sweetalert2@11.js"></script>
+<script src="assets/css/sweetalert2.min.css"></script>
 
 <!-- SweetAlert2 CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">-->
 
 <!-- SweetAlert2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!--<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>-->
 
 <!-- Font Awesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">-->
 
 <script>
     $(document).ready(function () {
